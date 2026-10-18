@@ -1,4 +1,3 @@
-// Seed data. Edit the wards list to match the official IEBC ward list you want to use.
 const sectors = [
   ['roads-transport', 'Roads & Transport', 'Potholes, damaged roads, bridges, street lighting, matatu stages'],
   ['water-sewerage', 'Water & Sewerage', 'Water shortages, burst pipes, sewer blockages'],

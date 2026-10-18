@@ -1,4 +1,3 @@
-/** Small illustrations for the dashboard stat cards (clipboard, magnifier, gears, checklist). */
 const svg = (children) => (props) => (
   <svg viewBox="0 0 80 80" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" {...props}>{children}</svg>
 );

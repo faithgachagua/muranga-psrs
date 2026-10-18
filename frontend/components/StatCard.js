@@ -9,7 +9,6 @@ const TONES = {
   slate:  { card: 'border-ink-200 bg-gradient-to-br from-white to-ink-50',       dot: 'bg-ink-600' },
 };
 
-/** Tinted stat card with a filled round icon, optional trend line and optional illustration. */
 export default function StatCard({ tone = 'blue', icon: Icon, label, value, trend, Art }) {
   const t = TONES[tone];
   return (

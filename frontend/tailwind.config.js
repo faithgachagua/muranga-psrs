@@ -1,4 +1,3 @@
-/** Palette from the dashboard mockup: deep navy chrome, county green for actions, soft blue surfaces. */
 module.exports = {
   content: ['./app/**/*.{js,jsx}', './components/**/*.{js,jsx}', './lib/**/*.{js,jsx}'],
   theme: {

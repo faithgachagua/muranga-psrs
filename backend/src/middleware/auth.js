@@ -12,6 +12,7 @@ exports.auth = (req, res, next) => {
   }
 };
 
+// Restricts a route to the given roles
 exports.role = (...roles) => (req, res, next) =>
   roles.includes(req.user.role) ? next() : res.status(403).json({ error: 'You do not have access to this' });
 

@@ -2,6 +2,7 @@ const router = require('express').Router();
 const pool = require('../db');
 const { auth, role } = require('../middleware/auth');
 const upload = require('../middleware/upload');
+const cloudinary = require('../cloudinary');
 const { notifyUser, notifyAdmins } = require('../notify');
 
 const BASE_SELECT = `
@@ -13,30 +14,44 @@ const BASE_SELECT = `
   JOIN users u ON u.id = c.citizen_id
   LEFT JOIN feedback f ON f.complaint_id = c.id`;
 
-// Submit a complaint. Sector-based routing: the complaint is filed under the chosen sector so the
-// county admin can sort, filter and report by sector, and is notified straight away.
+// Creates a request. Photos go to Cloudinary first, then everything is saved in one transaction.
 router.post('/', auth, role('citizen'), (req, res, next) =>
-  upload.array('evidence', 5)(req, res, (err) => (err ? res.status(400).json({ error: err.message }) : next())),
+  upload.array('photos', 5)(req, res, (err) => (err ? res.status(400).json({ error: err.message }) : next())),
   async (req, res, next) => {
     const { sector_id, ward_id, title, description, location_details } = req.body;
+    const toNumber = (v) => (v === undefined || v === '' ? null : Number(v));
+    const latitude = toNumber(req.body.latitude);
+    const longitude = toNumber(req.body.longitude);
     if (!sector_id || !ward_id || !title?.trim() || !description?.trim())
       return res.status(400).json({ error: 'Choose a sector and ward, and add a title and description' });
     if (description.length > 500) return res.status(400).json({ error: 'Description must be 500 characters or fewer' });
+    const hasPoint = latitude !== null || longitude !== null;
+    if (hasPoint && !(Math.abs(latitude) <= 90 && Math.abs(longitude) <= 180))
+      return res.status(400).json({ error: 'The GPS location is not valid' });
+
+    const files = req.files || [];
+    if (files.length && !cloudinary.isConfigured())
+      return res.status(503).json({ error: 'Photo uploads are not available right now. Send the request without photos.' });
+
+    const results = await Promise.allSettled(files.map((f) => cloudinary.uploadImage(f.buffer)));
+    const uploaded = results.filter((r) => r.status === 'fulfilled').map((r) => r.value);
+    if (uploaded.length !== files.length) {
+      await cloudinary.deleteImages(uploaded.map((u) => u.public_id));
+      return res.status(502).json({ error: 'Photo upload failed. Please try again.' });
+    }
 
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
       const { rows: [c] } = await client.query(
-        `INSERT INTO complaints(reference,citizen_id,sector_id,ward_id,title,description,location_details)
-         VALUES ('MCG-'||to_char(now(),'YYYY')||'-'||lpad(nextval('complaint_ref_seq')::text,6,'0'),$1,$2,$3,$4,$5,$6)
+        `INSERT INTO complaints(reference,citizen_id,sector_id,ward_id,title,description,location_details,latitude,longitude)
+         VALUES ('MCG-'||to_char(now(),'YYYY')||'-'||lpad(nextval('complaint_ref_seq')::text,6,'0'),$1,$2,$3,$4,$5,$6,$7,$8)
          RETURNING *`,
-        [req.user.id, sector_id, ward_id, title.trim(), description.trim(), location_details || null]
+        [req.user.id, sector_id, ward_id, title.trim(), description.trim(), location_details || null, latitude, longitude]
       );
-      for (const f of req.files || [])
-        await client.query(
-          'INSERT INTO complaint_attachments(complaint_id,filename,original_name,mimetype,size) VALUES ($1,$2,$3,$4,$5)',
-          [c.id, f.filename, f.originalname, f.mimetype, f.size]
-        );
+      for (const u of uploaded) {
+        await client.query('INSERT INTO complaint_photos(complaint_id,url,public_id,size) VALUES ($1,$2,$3,$4)', [c.id, u.secure_url, u.public_id, u.bytes]);
+      }
       await client.query('INSERT INTO complaint_updates(complaint_id,status,note,updated_by) VALUES ($1,$2,$3,$4)',
         [c.id, 'submitted', 'Request received', req.user.id]);
       await notifyUser(client, req.user.id, c.id, 'Request received',
@@ -47,6 +62,7 @@ router.post('/', auth, role('citizen'), (req, res, next) =>
       res.status(201).json(c);
     } catch (e) {
       await client.query('ROLLBACK');
+      await cloudinary.deleteImages(uploaded.map((u) => u.public_id));
       next(e);
     } finally {
       client.release();
@@ -54,6 +70,7 @@ router.post('/', auth, role('citizen'), (req, res, next) =>
   }
 );
 
+// A citizen's own requests
 router.get('/mine', auth, role('citizen'), async (req, res, next) => {
   try {
     const { rows } = await pool.query(`${BASE_SELECT} WHERE c.citizen_id=$1 ORDER BY c.created_at DESC`, [req.user.id]);
@@ -61,7 +78,7 @@ router.get('/mine', auth, role('citizen'), async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-// Single complaint: the resident who filed it, or an admin
+// One request with its photos and history; visible to its owner and to administrators
 router.get('/:id', auth, async (req, res, next) => {
   try {
     const { rows: [c] } = await pool.query(`${BASE_SELECT} WHERE c.id=$1`, [req.params.id]);
@@ -69,16 +86,16 @@ router.get('/:id', auth, async (req, res, next) => {
     const u = req.user;
     const allowed = u.role === 'admin' || c.citizen_id === u.id;
     if (!allowed) return res.status(403).json({ error: 'You do not have access to this request' });
-    const [att, upd] = await Promise.all([
-      pool.query('SELECT id, filename, original_name, mimetype, size FROM complaint_attachments WHERE complaint_id=$1', [c.id]),
+    const [photos, upd] = await Promise.all([
+      pool.query('SELECT id, url FROM complaint_photos WHERE complaint_id=$1 ORDER BY id', [c.id]),
       pool.query(`SELECT cu.*, us.full_name AS by_name FROM complaint_updates cu LEFT JOIN users us ON us.id=cu.updated_by
                   WHERE complaint_id=$1 ORDER BY cu.created_at`, [c.id]),
     ]);
-    res.json({ ...c, attachments: att.rows, updates: upd.rows });
+    res.json({ ...c, photos: photos.rows, updates: upd.rows });
   } catch (e) { next(e); }
 });
 
-// Rate how a resolved complaint was handled
+// Rating and comment from the citizen once a request is resolved
 router.post('/:id/feedback', auth, role('citizen'), async (req, res, next) => {
   try {
     const rating = parseInt(req.body.rating, 10);

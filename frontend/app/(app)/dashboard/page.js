@@ -21,7 +21,7 @@ const MEANINGS = {
   rejected: 'Not accepted. The reason is on the request.',
 };
 
-// Requests created this month vs last month, for the "from last month" line on each card.
+// Compares requests created this month with last month for the trend line on each card
 function trendFor(list, match) {
   const now = new Date();
   const inMonth = (d, offset) => { const x = new Date(d); const t = new Date(now.getFullYear(), now.getMonth() - offset, 1); return x.getFullYear() === t.getFullYear() && x.getMonth() === t.getMonth(); };

@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "lucide-react": "^0.453.0",
-    "next": "14.2.15",
+    "next": "^14.2.25",
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "recharts": "2.12.7"
@@ -18,5 +18,9 @@
     "autoprefixer": "^10.4.20",
     "postcss": "^8.4.47",
     "tailwindcss": "^3.4.13"
+  },
+  "description": "Web client for the Murang'a County Public Service Request System",
+  "engines": {
+    "node": ">=18"
   }
 }

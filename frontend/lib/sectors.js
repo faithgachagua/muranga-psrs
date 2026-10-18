@@ -3,7 +3,6 @@ import {
   Landmark, Map as MapIcon, Megaphone, Receipt, Recycle, Store, Trees, Wheat,
 } from 'lucide-react';
 
-// Same slugs and names as backend/src/seed.js. Used for icons and the public landing page.
 export const SECTOR_LIST = [
   { slug: 'roads-transport', name: 'Roads & Transport', icon: Construction },
   { slug: 'water-sewerage', name: 'Water & Sewerage', icon: Droplets },

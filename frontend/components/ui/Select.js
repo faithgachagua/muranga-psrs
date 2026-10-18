@@ -2,14 +2,7 @@
 import { Fragment, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Check, ChevronDown, Search } from 'lucide-react';
 
-/**
- * Accessible select (listbox) that replaces the native <select>.
- *
- * options: [{ value, label, icon?, group?, hint? }]   value is always a string
- * onChange receives the selected value (not an event)
- * searchable: adds a filter box, handy for long lists such as wards
- * Keyboard: Arrow keys, Home/End, Enter/Space to pick, Esc to close, type to filter when searchable.
- */
+// Listbox-style replacement for the native select. onChange receives the chosen value.
 export default function Select({
   value, onChange, options, placeholder = 'Select…', id, searchable = false, icon: LeadIcon,
   disabled = false, className = '', 'aria-label': ariaLabel,

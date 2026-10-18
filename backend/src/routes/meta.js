@@ -7,7 +7,7 @@ router.get('/sectors', async (req, res, next) => {
 router.get('/wards', async (req, res, next) => {
   try { res.json((await pool.query('SELECT id, name, sub_county FROM wards ORDER BY sub_county, name')).rows); } catch (e) { next(e); }
 });
-// Public tracking by reference number. Returns status only: no resident details, no notes.
+// Public lookup by reference number; exposes status only
 router.get('/track/:reference', async (req, res, next) => {
   try {
     const { rows: [c] } = await pool.query(

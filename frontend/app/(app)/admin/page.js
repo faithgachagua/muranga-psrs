@@ -57,8 +57,20 @@ export default function AdminDashboard() {
         <div className="card flex items-center gap-4"><span className="icon-tile"><TrendingUp className="h-5 w-5" aria-hidden="true" /></span>
           <div><div className="text-sm text-ink-500">Resolution rate</div><div className="font-heading text-2xl font-bold text-ink-900">{stats.resolutionRate}%</div></div></div>
         <div className="card flex items-center gap-4"><span className="icon-tile bg-amber-50 text-amber-500"><Star className="h-5 w-5" aria-hidden="true" /></span>
-          <div><div className="text-sm text-ink-500">Average resident rating</div>
+          <div><div className="text-sm text-ink-500">Average citizen rating</div>
             <div className="font-heading text-2xl font-bold text-ink-900">{stats.rating.n ? `${stats.rating.avg} / 5` : 'No ratings yet'}<span className="ml-2 font-sans text-sm font-normal text-ink-500">{stats.rating.n ? `${stats.rating.n} ratings` : ''}</span></div></div></div>
+      </div>
+
+      <div className="card">
+        <h2 className="mb-3 font-semibold text-ink-900">Open vs resolved cases</h2>
+        <div className="flex h-3 overflow-hidden rounded-full bg-ink-100" role="img" aria-label={`${stats.open} open and ${stats.counts.resolved} resolved`}>
+          <div className="bg-sky-500" style={{ width: `${(stats.open / ((stats.open + stats.counts.resolved) || 1)) * 100}%` }} />
+          <div className="bg-green-600" style={{ width: `${(stats.counts.resolved / ((stats.open + stats.counts.resolved) || 1)) * 100}%` }} />
+        </div>
+        <div className="mt-3 flex justify-between text-sm text-ink-600">
+          <span className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-sky-500" aria-hidden="true" /><b className="text-ink-900">{stats.open}</b> open (submitted, under review, in progress)</span>
+          <span className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-green-600" aria-hidden="true" /><b className="text-ink-900">{stats.counts.resolved}</b> resolved</span>
+        </div>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">

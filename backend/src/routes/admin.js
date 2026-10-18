@@ -5,7 +5,7 @@ const { notifyUser, STATUSES, STATUS_LABEL } = require('../notify');
 
 router.use(auth, role('admin'));
 
-// Builds a WHERE clause from the dashboard filters.
+// Builds the WHERE clause shared by the list, stats and export queries
 function buildWhere(q, user, params) {
   const where = [];
   const add = (sql, v) => { params.push(v); where.push(sql.split('?').join('$' + params.length)); };
@@ -35,6 +35,31 @@ router.get('/complaints', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
+// Downloads the filtered requests as a CSV file
+router.get('/export', async (req, res, next) => {
+  try {
+    const params = [];
+    const where = buildWhere(req.query, req.user, params);
+    const { rows } = await pool.query(
+      `SELECT c.reference, c.title, c.status, s.name AS sector, w.name AS ward, w.sub_county, u.full_name AS citizen,
+              c.latitude, c.longitude, c.created_at, c.resolved_at, f.rating
+       FROM complaints c JOIN sectors s ON s.id=c.sector_id JOIN wards w ON w.id=c.ward_id JOIN users u ON u.id=c.citizen_id
+       LEFT JOIN feedback f ON f.complaint_id=c.id ${where} ORDER BY c.created_at DESC`,
+      params
+    );
+    const cell = (v) => {
+      if (v == null) return '';
+      let text = v instanceof Date ? v.toISOString() : String(v);
+      if (/^[=+\-@]/.test(text)) text = `'${text}`;
+      return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+    };
+    const columns = ['reference', 'title', 'status', 'sector', 'ward', 'sub_county', 'citizen', 'latitude', 'longitude', 'created_at', 'resolved_at', 'rating'];
+    const lines = [columns.join(','), ...rows.map((r) => columns.map((k) => cell(r[k])).join(','))];
+    res.set({ 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': 'attachment; filename="requests.csv"' });
+    res.send(lines.join('\n'));
+  } catch (e) { next(e); }
+});
+
 router.get('/stats', async (req, res, next) => {
   try {
     const params = [];
@@ -54,6 +79,7 @@ router.get('/stats', async (req, res, next) => {
     const total = Object.values(counts).reduce((a, b) => a + b, 0);
     res.json({
       total, counts,
+      open: counts.submitted + counts.under_review + counts.in_progress,
       status: STATUSES.map((s) => ({ key: s, name: STATUS_LABEL[s], count: counts[s] })),
       bySector, byWard, trend,
       rating: rating[0],
@@ -62,7 +88,7 @@ router.get('/stats', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-// Update status (Submitted -> Under Review -> In Progress -> Resolved / Rejected)
+// Moves a request to a new status, records it in the history and notifies the citizen
 router.patch('/complaints/:id/status', async (req, res, next) => {
   const { status, note } = req.body;
   if (!STATUSES.includes(status)) return res.status(400).json({ error: 'Invalid status' });
@@ -90,7 +116,7 @@ router.patch('/complaints/:id/status', async (req, res, next) => {
   }
 });
 
-// Move a complaint to a different sector if the resident picked the wrong one
+// Re-files a request under another sector
 router.patch('/complaints/:id/sector', async (req, res, next) => {
   try {
     const { sector_id } = req.body;

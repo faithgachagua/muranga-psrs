@@ -1,23 +1,20 @@
-DROP TABLE IF EXISTS notifications, feedback, complaint_updates, complaint_attachments, complaints, users, wards, sectors CASCADE;
-DROP SEQUENCE IF EXISTS complaint_ref_seq;
+CREATE SEQUENCE IF NOT EXISTS complaint_ref_seq START 1;
 
-CREATE SEQUENCE complaint_ref_seq START 1;
-
-CREATE TABLE sectors (
+CREATE TABLE IF NOT EXISTS sectors (
   id SERIAL PRIMARY KEY,
   slug TEXT UNIQUE NOT NULL,
   name TEXT UNIQUE NOT NULL,
   description TEXT
 );
 
-CREATE TABLE wards (
+CREATE TABLE IF NOT EXISTS wards (
   id SERIAL PRIMARY KEY,
   name TEXT NOT NULL,
   sub_county TEXT NOT NULL,
   UNIQUE (name, sub_county)
 );
 
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
   id SERIAL PRIMARY KEY,
   full_name TEXT NOT NULL,
   email TEXT UNIQUE NOT NULL,
@@ -29,7 +26,7 @@ CREATE TABLE users (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE TABLE complaints (
+CREATE TABLE IF NOT EXISTS complaints (
   id SERIAL PRIMARY KEY,
   reference TEXT UNIQUE NOT NULL,
   citizen_id INT NOT NULL REFERENCES users(id),
@@ -38,28 +35,32 @@ CREATE TABLE complaints (
   title TEXT NOT NULL,
   description TEXT NOT NULL,
   location_details TEXT,
+  latitude DOUBLE PRECISION,
+  longitude DOUBLE PRECISION,
   status TEXT NOT NULL DEFAULT 'submitted'
     CHECK (status IN ('submitted','under_review','in_progress','resolved','rejected')),
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now(),
   resolved_at TIMESTAMPTZ
 );
-CREATE INDEX idx_complaints_sector ON complaints(sector_id);
-CREATE INDEX idx_complaints_ward ON complaints(ward_id);
-CREATE INDEX idx_complaints_status ON complaints(status);
-CREATE INDEX idx_complaints_created ON complaints(created_at);
-CREATE INDEX idx_complaints_citizen ON complaints(citizen_id);
+ALTER TABLE complaints ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION;
+ALTER TABLE complaints ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION;
 
-CREATE TABLE complaint_attachments (
+CREATE INDEX IF NOT EXISTS idx_complaints_sector ON complaints(sector_id);
+CREATE INDEX IF NOT EXISTS idx_complaints_ward ON complaints(ward_id);
+CREATE INDEX IF NOT EXISTS idx_complaints_status ON complaints(status);
+CREATE INDEX IF NOT EXISTS idx_complaints_created ON complaints(created_at);
+CREATE INDEX IF NOT EXISTS idx_complaints_citizen ON complaints(citizen_id);
+
+CREATE TABLE IF NOT EXISTS complaint_photos (
   id SERIAL PRIMARY KEY,
   complaint_id INT NOT NULL REFERENCES complaints(id) ON DELETE CASCADE,
-  filename TEXT NOT NULL,
-  original_name TEXT NOT NULL,
-  mimetype TEXT,
+  url TEXT NOT NULL,
+  public_id TEXT NOT NULL,
   size INT
 );
 
-CREATE TABLE complaint_updates (
+CREATE TABLE IF NOT EXISTS complaint_updates (
   id SERIAL PRIMARY KEY,
   complaint_id INT NOT NULL REFERENCES complaints(id) ON DELETE CASCADE,
   status TEXT NOT NULL,
@@ -68,7 +69,7 @@ CREATE TABLE complaint_updates (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE TABLE feedback (
+CREATE TABLE IF NOT EXISTS feedback (
   id SERIAL PRIMARY KEY,
   complaint_id INT UNIQUE NOT NULL REFERENCES complaints(id) ON DELETE CASCADE,
   citizen_id INT NOT NULL REFERENCES users(id),
@@ -77,7 +78,7 @@ CREATE TABLE feedback (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE TABLE notifications (
+CREATE TABLE IF NOT EXISTS notifications (
   id SERIAL PRIMARY KEY,
   user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   complaint_id INT REFERENCES complaints(id) ON DELETE CASCADE,
@@ -86,4 +87,12 @@ CREATE TABLE notifications (
   is_read BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT now()
 );
-CREATE INDEX idx_notifications_user ON notifications(user_id, is_read);
+CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, is_read);
+
+CREATE TABLE IF NOT EXISTS password_resets (
+  id SERIAL PRIMARY KEY,
+  user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  token_hash TEXT UNIQUE NOT NULL,
+  expires_at TIMESTAMPTZ NOT NULL,
+  used_at TIMESTAMPTZ
+);

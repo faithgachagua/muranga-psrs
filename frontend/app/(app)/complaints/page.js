@@ -14,7 +14,7 @@ export default function MyRequests() {
   const [status, setStatus] = useState('');
   const [q, setQ] = useState('');
   useEffect(() => {
-    setQ(new URLSearchParams(window.location.search).get('q') || ''); // from the header search box
+    setQ(new URLSearchParams(window.location.search).get('q') || '');
     api('/complaints/mine').then(setList).catch(() => setList([]));
   }, []);
   if (!list) return <p className="text-sm text-ink-500">Loading…</p>;

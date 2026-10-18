@@ -43,6 +43,7 @@ function Sidebar({ nav, active, unread, logout, onNavigate }) {
   );
 }
 
+// Layout for signed-in pages: sidebar, search, notifications badge and user menu
 export default function Shell({ children }) {
   const { user, ready, logout } = useAuth();
   const router = useRouter();
@@ -112,7 +113,7 @@ export default function Shell({ children }) {
               <button onClick={() => setMenu(!menu)} aria-expanded={menu} aria-haspopup="menu" className="flex items-center gap-3 rounded-xl p-1 hover:bg-ink-50">
                 <span className="flex h-11 w-11 items-center justify-center rounded-full bg-navy-900 text-white"><User className="h-5 w-5" aria-hidden="true" /></span>
                 <span className="hidden text-left leading-tight sm:block"><span className="block text-sm font-semibold text-navy-900">{user.full_name}</span>
-                  <span className="block text-xs text-ink-500">{isAdmin ? 'County administrator' : 'Resident'}</span></span>
+                  <span className="block text-xs text-ink-500">{isAdmin ? 'County administrator' : 'Citizen'}</span></span>
                 <ChevronDown className={`hidden h-4 w-4 text-ink-500 transition sm:block ${menu ? 'rotate-180' : ''}`} aria-hidden="true" />
               </button>
               {menu && (

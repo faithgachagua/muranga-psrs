@@ -1,16 +1,11 @@
 const multer = require('multer');
-const path = require('path');
-const crypto = require('crypto');
 
-const ALLOWED = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf',
-  'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
+// Photos are held in memory and passed straight on to Cloudinary
 module.exports = multer({
-  storage: multer.diskStorage({
-    destination: path.join(__dirname, '..', '..', 'uploads'),
-    filename: (req, file, cb) => cb(null, crypto.randomBytes(16).toString('hex') + path.extname(file.originalname).toLowerCase()),
-  }),
+  storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024, files: 5 },
   fileFilter: (req, file, cb) =>
-    ALLOWED.includes(file.mimetype) ? cb(null, true) : cb(new Error('Only JPG, PNG, WEBP, PDF or Word files are allowed')),
+    IMAGE_TYPES.includes(file.mimetype) ? cb(null, true) : cb(new Error('Only JPG, PNG or WEBP photos are allowed')),
 });

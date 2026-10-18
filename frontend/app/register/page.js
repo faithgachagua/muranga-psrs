@@ -30,7 +30,7 @@ export default function Register() {
   }
 
   return (
-    <AuthCard title="Create your account" subtitle="Residents can send and track requests to the county.">
+    <AuthCard title="Create your account" subtitle="Citizens can send and track requests to the county.">
       <form onSubmit={submit} className="space-y-4">
         <div><label className="label" htmlFor="fn">Full name</label><input id="fn" className="input" value={f.full_name} onChange={set('full_name')} required /></div>
         <div className="grid gap-4 sm:grid-cols-2">

@@ -2,9 +2,10 @@
 import { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, CalendarDays, CheckCircle2, FileText, MapPin, Save, Star, User } from 'lucide-react';
+import { ArrowLeft, CalendarDays, CheckCircle2, MapPin, Save, Star, User } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
-import { api, API_BASE } from '@/lib/api';
+import { api } from '@/lib/api';
+import { optimised, thumbnail } from '@/lib/photos';
 import { fmtDateTime, STATUS } from '@/lib/constants';
 import { sectorOptions, statusOptions } from '@/lib/options';
 import { sectorIcon } from '@/lib/sectors';
@@ -35,7 +36,7 @@ export default function RequestDetail() {
 
   async function updateStatus() {
     setMsg('');
-    try { await api(`/admin/complaints/${id}/status`, { method: 'PATCH', body: { status, note } }); setNote(''); setMsg('Status updated. The resident has been notified.'); load(); }
+    try { await api(`/admin/complaints/${id}/status`, { method: 'PATCH', body: { status, note } }); setNote(''); setMsg('Status updated. The citizen has been notified.'); load(); }
     catch (e) { setMsg(e.message); }
   }
   async function reroute(sector_id) {
@@ -62,18 +63,23 @@ export default function RequestDetail() {
           <div className="flex gap-2"><SectorIcon className="mt-0.5 h-4 w-4 text-brand-600" aria-hidden="true" /><div><dt className="text-ink-500">Sector</dt><dd className="font-medium">{c.sector_name}</dd></div></div>
           <div className="flex gap-2"><MapPin className="mt-0.5 h-4 w-4 text-brand-600" aria-hidden="true" /><div><dt className="text-ink-500">Ward</dt><dd className="font-medium">{c.ward_name} ({c.sub_county})</dd></div></div>
           <div className="flex gap-2"><CalendarDays className="mt-0.5 h-4 w-4 text-brand-600" aria-hidden="true" /><div><dt className="text-ink-500">Submitted</dt><dd className="font-medium">{fmtDateTime(c.created_at)}</dd></div></div>
-          {staff && <div className="flex gap-2"><User className="mt-0.5 h-4 w-4 text-brand-600" aria-hidden="true" /><div><dt className="text-ink-500">Resident</dt><dd className="font-medium">{c.citizen_name}</dd></div></div>}
+          {staff && <div className="flex gap-2"><User className="mt-0.5 h-4 w-4 text-brand-600" aria-hidden="true" /><div><dt className="text-ink-500">Citizen</dt><dd className="font-medium">{c.citizen_name}</dd></div></div>}
           {c.location_details && <div className="sm:col-span-2"><dt className="text-ink-500">Location</dt><dd>{c.location_details}</dd></div>}
         </dl>
         <p className="mt-5 whitespace-pre-wrap text-sm leading-relaxed">{c.description}</p>
-        {c.attachments.length > 0 && (
-          <div className="mt-5"><div className="mb-2 text-sm font-medium">Evidence</div>
-            <div className="flex flex-wrap gap-3">{c.attachments.map((a) => {
-              const url = `${API_BASE}/uploads/${a.filename}`;
-              return a.mimetype?.startsWith('image/')
-                ? <a key={a.id} href={url} target="_blank" rel="noreferrer"><img src={url} alt={a.original_name} className="h-24 w-24 rounded-lg border border-ink-100 object-cover" /></a>
-                : <a key={a.id} href={url} target="_blank" rel="noreferrer" className="btn-outline"><FileText className="h-4 w-4" aria-hidden="true" />{a.original_name}</a>;
-            })}</div></div>
+        {c.latitude != null && c.longitude != null && (
+          <div className="mt-5">
+            <div className="mb-2 flex items-center justify-between text-sm font-medium"><span>GPS location</span>
+              <a href={`https://www.google.com/maps?q=${c.latitude},${c.longitude}`} target="_blank" rel="noreferrer" className="font-semibold text-brand-700 hover:underline">Open in Google Maps</a></div>
+            <iframe title="Map of the reported location" loading="lazy" className="h-56 w-full rounded-xl border border-ink-100"
+              src={`https://www.openstreetmap.org/export/embed.html?bbox=${c.longitude - 0.005}%2C${c.latitude - 0.003}%2C${c.longitude + 0.005}%2C${c.latitude + 0.003}&layer=mapnik&marker=${c.latitude}%2C${c.longitude}`} />
+          </div>
+        )}
+        {c.photos.length > 0 && (
+          <div className="mt-5"><div className="mb-2 text-sm font-medium">Photos</div>
+            <div className="flex flex-wrap gap-3">{c.photos.map((p, i) => (
+              <a key={p.id} href={optimised(p.url)} target="_blank" rel="noreferrer">
+                <img src={thumbnail(p.url)} alt={`Photo ${i + 1} for ${c.reference}`} className="h-24 w-24 rounded-lg border border-ink-100 object-cover" /></a>))}</div></div>
         )}
       </div>
 
@@ -82,7 +88,7 @@ export default function RequestDetail() {
           <h2 className="font-semibold text-ink-900">Update status</h2>
           <div className="grid gap-3 sm:grid-cols-3">
             <Select value={status} onChange={setStatus} options={statusOptions()} aria-label="Status" />
-            <input className="input sm:col-span-2" placeholder={status === 'rejected' ? 'Reason for rejecting (required)' : 'Note for the resident (optional)'} value={note} onChange={(e) => setNote(e.target.value)} />
+            <input className="input sm:col-span-2" placeholder={status === 'rejected' ? 'Reason for rejecting (required)' : 'Note for the citizen (optional)'} value={note} onChange={(e) => setNote(e.target.value)} />
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <button className="btn-primary" onClick={updateStatus}><Save className="h-4 w-4" aria-hidden="true" />Save status</button>
@@ -97,7 +103,7 @@ export default function RequestDetail() {
         <div className="card space-y-3">
           <h2 className="font-semibold text-ink-900">How did we do?</h2>
           {c.rating ? (
-            <p className="text-sm">You rated this <b>{c.rating}/5</b>{c.feedback_comment ? `: “${c.feedback_comment}”` : ''}. Thank you.</p>
+            <p className="text-sm">You rated this <b>{c.rating}/5</b>{c.feedback_comment ? `: "${c.feedback_comment}"` : ''}. Thank you.</p>
           ) : (<>
             <div className="flex gap-1" role="radiogroup" aria-label="Rating">{[1, 2, 3, 4, 5].map((n) => (
               <button key={n} type="button" role="radio" aria-checked={rating === n} onClick={() => setRating(n)} aria-label={`${n} star${n > 1 ? 's' : ''}`}>
@@ -108,7 +114,7 @@ export default function RequestDetail() {
           </>)}
         </div>
       )}
-      {staff && c.rating && <div className="card flex items-center gap-2 text-sm"><Star className="h-4 w-4 fill-amber-400 text-amber-400" aria-hidden="true" />Resident rating: <b>{c.rating}/5</b>{c.feedback_comment ? ` — ${c.feedback_comment}` : ''}</div>}
+      {staff && c.rating && <div className="card flex items-center gap-2 text-sm"><Star className="h-4 w-4 fill-amber-400 text-amber-400" aria-hidden="true" />Citizen rating: <b>{c.rating}/5</b>{c.feedback_comment ? `: ${c.feedback_comment}` : ''}</div>}
 
       <div className="card">
         <h2 className="mb-4 font-semibold text-ink-900">Progress</h2>
