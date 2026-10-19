@@ -7,6 +7,7 @@ import { useAuth } from '@/lib/auth';
 import { api } from '@/lib/api';
 import { IMAGES } from '@/lib/images';
 import Brand from './Brand';
+import PageLoader from './PageLoader';
 
 const CITIZEN_NAV = [
   { href: '/dashboard', label: 'Dashboard', icon: Home },
@@ -71,7 +72,7 @@ export default function Shell({ children }) {
     return () => document.removeEventListener('mousedown', onDown);
   }, []);
 
-  if (!ready || !user) return <div className="p-10 text-sm text-ink-500">Loading…</div>;
+  if (!ready || !user) return <PageLoader fullScreen label={ready ? 'Taking you to the login page…' : 'Loading…'} />;
   const isAdmin = user.role === 'admin';
   const nav = isAdmin ? ADMIN_NAV : CITIZEN_NAV;
   const active = (href) => (href === '/admin' || href === '/dashboard' ? path === href : path.startsWith(href));
