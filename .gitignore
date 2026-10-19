@@ -1,5 +1,16 @@
 node_modules
 .next
+.vercel
+
+# secrets: keep only the examples
 .env
-.env.local
+.env.*
+!.env.example
+
+# local files
+backend/uploads/
+*.log
 .DS_Store
+.idea
+.vscode
+coverage

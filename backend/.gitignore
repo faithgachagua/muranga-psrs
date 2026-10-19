@@ -1,2 +1,10 @@
 node_modules
+
+# secrets: keep only the example
 .env
+.env.*
+!.env.example
+
+# photos live in Cloudinary, not on disk
+uploads/
+*.log

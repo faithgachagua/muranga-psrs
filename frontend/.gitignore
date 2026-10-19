@@ -1,4 +1,11 @@
 node_modules
 .next
-.env.local
+.vercel
+next-env.d.ts
+*.tsbuildinfo
+
+# secrets: keep only the example
 .env
+.env.*
+!.env.example
+*.log
