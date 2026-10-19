@@ -13,8 +13,8 @@ export default function AuthCard({ title, subtitle, children }) {
         <div className="relative z-10 mt-auto max-w-md pb-[22%]">
           <h1 className="text-4xl font-bold leading-tight text-white drop-shadow">Report it. Track it. See it fixed.</h1>
           <p className="mt-4 text-blue-50 drop-shadow">Send a request to the county under the right sector, follow every step, and rate how it was handled.</p>
-          <p className="mt-6 flex items-center gap-2 text-sm text-blue-100"><ShieldCheck className="h-4 w-4" aria-hidden="true" />Your details are only used to handle your requests.</p>
         </div>
+        <p className="absolute inset-x-10 bottom-8 z-10 flex items-center gap-2 text-sm text-blue-100 drop-shadow"><ShieldCheck className="h-4 w-4 shrink-0" aria-hidden="true" />Your details are only used to handle your requests.</p>
       </div>
       <div className="flex flex-1 items-center justify-center bg-white p-6">
         <div className="w-full max-w-md">
